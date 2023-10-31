@@ -17,8 +17,9 @@ def find_sol(data):  # data = abf.sweepY of second channel out of three channels
     sol = list(test)
     return sol
 
-def Extract_mEAG(FILE, lc, hc):
-    print('meag',type(FILE))
+def Extract_mEAG(FILE, lc, hc, ORDER, BF=True):
+    print(FILE)
+    print('meag', type(FILE))
     # first we load the data into our variable abf
     abf = pyabf.ABF(FILE)
     # now lets find out how many channels are in the files
@@ -29,7 +30,7 @@ def Extract_mEAG(FILE, lc, hc):
     sol = find_sol(abf.sweepY)
     # we now have a set of tuples. the first number in the tuple is when the solenoid is open, the second is close
     # for our data let extract the .5 seconds prior to solenoid activating and 5 seconds after it closes
-    # abf=pyabf.ABF(file)
+
     ni = len(sol)
     npts = 9000
     CH1 = np.zeros((ni, npts))
@@ -46,11 +47,14 @@ def Extract_mEAG(FILE, lc, hc):
     #remove the ch1 signal from channel to that occurs due to propagation of signal towards brain.
     CHL[1] = CHL[1]-CHL[0]
     CHL_Final=[]
-    for ch in CHL:
-        if not (ch == 0).all():
+    if BF == True:
+        for ch in CHL:
             for x in range(0, 3):
                 ch[x][:] = [n - (ch[x][:500].mean()) for n in ch[x][:]]
-                ch[x, :] = butter_bandpass_filter(ch[x], lowcut=lc, highcut=hc, fs=1000.0, order=1)
+                ch[x, :] = butter_bandpass_filter(ch[x], lowcut=lc, highcut=hc, fs=1000.0, order=ORDER)
+            CHL_Final.append(ch)
+    else:
+        for ch in CHL:
             CHL_Final.append(ch)
     return CHL_Final
 
@@ -138,10 +142,35 @@ def namer(f):
 
 
 def findCTRL(file1, folder):
+    #used to find the control file.
+    result = 1000000000
+    ctrl = None
+    date = os.path.basename(file1).split('_')[0]
+    pfiles = [x for x in folder if date.lower() in os.path.basename(x.lower())]
+    for x in pfiles:
+        #get the time difference between experiment and the control. repeat for all files in folder
+        tt = abs(os.path.getmtime(file1) - os.path.getmtime(x))
+        if tt < result:
+            #if the difference is smaller than the result variable then replace "result" with new dif
+            result = tt
+            ctrl = x
+            # print(ctrl)
+    return ctrl
+
+def findNORM(file1, folder):
+    print(f'finding the normalizer for: {file1}')
     #used the find the control file.
     result = 1000000000
     ctrl = None
-    for x in folder:
+    concentration = file1.split('_')[3].lower()
+    date = os.path.basename(file1).split('_')[0]
+    print(f'concentration of file is: {concentration.lower()}')
+    print(f'date of file is: {date}')
+    pfiles = [x.lower() for x in folder if concentration.lower() in os.path.basename(x.lower())]
+    print(pfiles)
+    pfiles2 = [x for x in pfiles if date.lower() in os.path.basename(x.lower())]
+    print(pfiles2)
+    for x in pfiles2:
         #get the time difference between experiment and the control. repeat for all files in folder
         tt = abs(os.path.getmtime(file1) - os.path.getmtime(x))
         if tt < result:
@@ -267,8 +296,8 @@ def find_MaxIntenseWave(data):
     return data[best_index]
 
 def EAG_df_build(DIR):
-    F_List = os.listdir(DIR)
-    Directory = DIR
+    F_List = [os.path.join(dirpath, filename) for dirpath, dirnames, filenames in os.walk(DIR) for filename in
+              filenames if '.DS_Store' not in filename]
     master = []
     mastern = []
     masterl = []
@@ -277,13 +306,12 @@ def EAG_df_build(DIR):
 
     for file in F_List:
         print(file)
-        cat = file.lower().split('_')
         n = os.path.basename(file.lower()).split("_")
         name = n[0] + n[1] + n[2] + n[3] + n[4].replace('.csv', '')
         lab = n[2]
         conc = n[1]
         date = n[0]
-        x = open_wave(Directory + file)
+        x = open_wave(file)
         master.append(x)
         mastern.append(name)
         masterl.append(lab)
@@ -317,7 +345,8 @@ def get_subdirectories(directory):
             subdirectories.append(path)
     return subdirectories
 
-def process_data(DL=[], savedir=None, SUB=False, SUM=False, Norm='YY', Smoothen=False, LOG=False, Butter=[], RETURN='Save'):
+def process_data(DIR, savedir=None, SUB=False, SUM=False, Norm='YY', Smoothen=False, LOG=False, Butter=[],
+                 B_filt=True, RETURN='Save'):
     """
         Process data from DList and save the processed data to savedir.
 
@@ -330,121 +359,125 @@ def process_data(DL=[], savedir=None, SUB=False, SUM=False, Norm='YY', Smoothen=
 
         Returns: None
         """
-
+    B_filt = B_filt
     Sub = SUB
     Sum = SUM
     SAVEDIR = savedir
-    DList=[(subdir +'/') for directory in DL for subdir in get_subdirectories(directory)]
+    #DList=[(subdir +'/') for directory in DL for subdir in get_subdirectories(directory)]
+    FileList = [os.path.join(dirpath, filename) for dirpath, dirnames, filenames in os.walk(DIR) for filename in
+                filenames if '.DS_Store' not in filename]
 
-    for D in DList:
-        print('beginning ', D)
-        f1 = [f.path for f in os.scandir(D)
-              if 'DS_Store' not in os.path.basename(f)]
-        # seperate the data into experimental and control lists
-        ctrl = [x for x in f1 if 'mineraloil' in os.path.basename(x)]#if 'BagNoOdor' in os.path.basename(x)
-        print(ctrl)
-        exp = [x for x in f1 if 'mineraloil' not in os.path.basename(x) if '_300_' not in os.path.basename(x)]
-        YY = [x for x in f1 if 'ylangylang' in os.path.basename(x)]
-        # Do we want to Normalize the data?
-        Normalize = Norm
-        # Extract the each individual wave and subtract the miniral oil control
-        for e in exp:
-            data = e
-            control = findCTRL(data, ctrl)
-            MINIM = findCTRL(data, YY)
-            # print(data,control)
-            n = os.path.basename(data)
-            print(n, 'is an experiment')
-            VOC = n.split("_")[2]
+    f1 = [f for f in FileList
+          if 'DS_Store' not in os.path.basename(f)]
+    # seperate the data into experimental and control lists
+    ctrl = [x for x in f1 if 'mineraloil' in os.path.basename(x) or 'Mineral_Oil' in os.path.basename(
+        x)]  # if 'BagNoOdor' in os.path.basename(x)
+    print(f'these are {len(ctrl)} control files')
+    exp = [x for x in f1 if 'mineraloil' not in os.path.basename(x) and 'Mineral_Oil' not in os.path.basename(
+        x) and '_300_' not in os.path.basename(x) and '_3k_' not in os.path.basename(x)]
+    # print(f'these are the experiments {exp}')
+    YY = [x for x in f1 if 'ylangylang' in os.path.basename(x) or 'YlangYlang' in os.path.basename(x)]
+    print(f'these are {len(YY)} control files')
 
-            DIR = SAVEDIR + VOC + '/'
-            n = namer(data)
-            print('pre meag',data)
-            Odor = Extract_mEAG(data, Butter[0], Butter[1])
-            print('prectrl', control)
-            CTRL = Extract_mEAG(control, Butter[0], Butter[1])
-            MIN = Extract_mEAG(MINIM, Butter[0], Butter[1])
+    # Do we want to Normalize the data?
+    Normalize = Norm
+    # Extract the each individual wave and subtract the miniral oil control
+    for e in exp:
+        data = e
+        control = findCTRL(data, ctrl)
+        MINIM = findNORM(data, YY)
+        # print(data,control)
+        n = os.path.basename(data)
+        print(n, 'is an experiment')
+        VOC = n.split("_")[2]
 
+        DIR = SAVEDIR + VOC + '/'
+        n = namer(data)
+        print('pre meag',data)
+        Odor = Extract_mEAG(data, Butter[0], Butter[1], Butter[2], BF=B_filt)
+        CTRL = Extract_mEAG(control, Butter[0], Butter[1], Butter[2], BF=B_filt)
+        MIN = Extract_mEAG(MINIM, Butter[0], Butter[1], Butter[2], BF=B_filt)
+        print(Odor)
+        for x in range(0, 3):
+            # subtract the control
+            Odor[0][x, :] = Odor[0][x, :] - (CTRL[0].mean(axis=0))
+            Odor[1][x, :] = Odor[1][x, :] - (CTRL[1].mean(axis=0))
+            #subtract the signal of tip from the base
+            Odor[1][x, :] = Odor[0][x, :] - Odor[1][x, :]
+
+            MIN[0][x, :] = MIN[0][x, :] - (CTRL[0].mean(axis=0))
+            MIN[1][x, :] = MIN[1][x, :] - (CTRL[1].mean(axis=0))
+            # subtract channel 1 from channel 2
+            if Sub == True:
+                Odor[0][x, :] = -1 * Odor[0][x, :]
+                Odor[0][x, :] = Odor[1][x, :] - Odor[0][x, :]
+
+            if Sum == True:
+                Odor[0][x, :] = -1 * Odor[0][x, :]
+
+                Odor[0][x, :] = Odor[1][x, :] + Odor[0][x, :]
+
+        MIN1 = find_MaxIntenseWave(MIN[0])
+        MIN2 = find_MaxIntenseWave(MIN[1])
+        if Normalize == 'Yes':
             for x in range(0, 3):
-                # subtract the control
-                Odor[0][x, :] = Odor[0][x, :] - (CTRL[0].mean(axis=0))
-                Odor[1][x, :] = Odor[1][x, :] - (CTRL[1].mean(axis=0))
-                #subtract the signal of tip from the base
-                Odor[1][x, :] = Odor[0][x, :] - Odor[1][x, :]
+                Odor[0][x, :] = MinMax_Norm(Odor[0][x, :])
+                Odor[1][x, :] = MinMax_Norm(Odor[1][x, :])
 
-                MIN[0][x, :] = MIN[0][x, :] - (CTRL[0].mean(axis=0))
-                MIN[1][x, :] = MIN[1][x, :] - (CTRL[1].mean(axis=0))
-                # subtract channel 1 from channel 2
-                if Sub == True:
-                    Odor[0][x, :] = -1 * Odor[0][x, :]
-                    Odor[0][x, :] = Odor[1][x, :] - Odor[0][x, :]
+        elif Normalize == 'YY':
+            for x in range(0, 3):
+                # normalize to ylangylang each channel seperately
+                Odor[0][x, :] = Min_Normalization(MIN1, Odor[0][x, :])
+                Odor[1][x, :] = Min_Normalization(MIN2, Odor[1][x, :])
+                # baseline the result to 0
+                avg = np.mean(Odor[0][x, 0:500])
+                Odor[0][x, :] = [n - avg for n in Odor[0][x, :]]
+                avg = np.mean(Odor[1][x, 0:500])
+                Odor[1][x, :] = [n - avg for n in Odor[1][x, :]]
 
-                if Sum == True:
-                    Odor[0][x, :] = -1 * Odor[0][x, :]
+                if Smoothen == True:
+                    for x in range(0, 3):
+                        Odor[0][x, :] = Mean_Smoothing(data = Odor[0][x, :], window=125, normalized=True)
+                        Odor[1][x, :] = Mean_Smoothing(data = Odor[1][x, :], window=125, normalized=True)
 
-                    Odor[0][x, :] = Odor[1][x, :] + Odor[0][x, :]
+        elif Normalize == False:
+            for x in range(0, 3):
+                avg = np.mean(Odor[0][x, 0:500])
+                Odor[0][x, :] = [n - avg for n in Odor[0][x, :]]
+                avg = np.mean(Odor[1][x, 0:500])
+                Odor[1][x, :] = [n - avg for n in Odor[1][x, :]]
 
-            MIN1 = find_MaxIntenseWave(MIN[0])
-            MIN2 = find_MaxIntenseWave(MIN[1])
-            if Normalize == 'Yes':
-                for x in range(0, 3):
-                    Odor[0][x, :] = MinMax_Norm(Odor[0][x, :])
-                    Odor[1][x, :] = MinMax_Norm(Odor[1][x, :])
+        if Smoothen == True:
+            for x in range(0, 3):
+                Odor[0][x, :] = Mean_Smoothing(data = Odor[0][x, :], window=125, normalized=False)
+                Odor[1][x, :] = Mean_Smoothing(data = Odor[1][x, :], window=125, normalized=False)
 
-            elif Normalize == 'YY':
-                for x in range(0, 3):
-                    # normalize to ylangylang each channel seperately
-                    Odor[0][x, :] = Min_Normalization(MIN1, Odor[0][x, :])
-                    Odor[1][x, :] = Min_Normalization(MIN2, Odor[1][x, :])
-                    # baseline the result to 0
-                    avg = np.mean(Odor[0][x, 0:500])
-                    Odor[0][x, :] = [n - avg for n in Odor[0][x, :]]
-                    avg = np.mean(Odor[1][x, 0:500])
-                    Odor[1][x, :] = [n - avg for n in Odor[1][x, :]]
-
-                    if Smoothen == True:
-                        for x in range(0, 3):
-                            Odor[0][x, :] = Mean_Smoothing(data = Odor[0][x, :], window=125, normalized=True)
-                            Odor[1][x, :] = Mean_Smoothing(data = Odor[1][x, :], window=125, normalized=True)
-
-            elif Normalize == False:
-                for x in range(0, 3):
-                    avg = np.mean(Odor[0][x, 0:500])
-                    Odor[0][x, :] = [n - avg for n in Odor[0][x, :]]
-                    avg = np.mean(Odor[1][x, 0:500])
-                    Odor[1][x, :] = [n - avg for n in Odor[1][x, :]]
-
-            if Smoothen == True:
-                for x in range(0, 3):
-                    Odor[0][x, :] = Mean_Smoothing(data = Odor[0][x, :], window=125, normalized=False)
-                    Odor[1][x, :] = Mean_Smoothing(data = Odor[1][x, :], window=125, normalized=False)
-
-            if LOG == True:
-                Odor[0][x, :] = log_transform(Odor[0][x, :])
-                Odor[1][x, :] = log_transform(Odor[1][x, :])
+        if LOG == True:
+            Odor[0][x, :] = log_transform(Odor[0][x, :])
+            Odor[1][x, :] = log_transform(Odor[1][x, :])
 
 
-            if  (Sub or Sum)  != True:
+        if  (Sub or Sum)  != True:
 
-                print('neither subtraction or addition happened')
-                Odor = ConcCh(Odor)
+            print('neither subtraction or addition happened')
+            Odor = ConcCh(Odor)
 
-                # plt.plot(Odor[0])
-                # plt.show()
+            # plt.plot(Odor[0])
+            # plt.show()
 
-                # multisiteSave2(Odor,directory=DIR, name=n)
+            # multisiteSave2(Odor,directory=DIR, name=n)
 
-            if RETURN == 'SAVE':
-                if Sub == True:
-                    multisiteSave(Odor[0], directory=DIR, name=n)
-                elif Sum == True:
-                    multisiteSave(Odor[0], directory=DIR, name=n)
-                else:
-                    multisiteSave(Odor, directory=DIR, name=n)
+        if RETURN == 'SAVE':
+            if Sub == True:
+                multisiteSave(Odor[0], directory=DIR, name=n)
+            elif Sum == True:
+                multisiteSave(Odor[0], directory=DIR, name=n)
+            else:
+                multisiteSave(Odor, directory=DIR, name=n)
 
-            elif RETURN == 'PLOT':
-                plt.plot(Odor[1][0])
-                plt.show()
+        elif RETURN == 'PLOT':
+            plt.plot(Odor[1][0])
+            plt.show()
 
 def PSD_analysis(data):
     dt = 1

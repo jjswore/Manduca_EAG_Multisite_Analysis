@@ -1,23 +1,29 @@
 from EAG_Classifier_Library import *
 import os
 
+#assign a directory which contains the data to be analyzed
 DIR='/Users/joshswore/Manduca/MultiChannel/Floral/Quality_Controlled_Data/ButterLC1_HC3/YY_Normalized/Both_Channels/'
 DirList = os.listdir(DIR)
 print(f'beginng Classification of YY_Normalized channels subtracted Data')
 for f in DirList:
     if f.endswith('.csv'):
+        #a check for the file that will be processed
+        #these are csv files which were created from a data frame
         print(f)
         All_df = pd.read_csv(f'{DIR}{f}' , index_col=0)
-
+        #in this case the I am filtering the dataframe to classify VOCs that were
+        #applied at 1:1k concentration and uses a subset of the VOCs
         All_df= All_df[All_df['concentration'].str.contains('1k')]
         All_df= All_df[All_df['label'].str.contains('linalool|limonene|lemonoil')]
-
+        #extract the data associated with chanels 1 and 2 seperately
         CH1=All_df.iloc[:,:9000]
+        #the last three columns contain "metadata" information
         CH2=All_df.iloc[:,9000:-3]
-        Ch_List=[All_df.iloc[:,:-3]]
-        Ch_Name_list=['Both Channels']
+        Ch_List=[CH1, CH2]
+        Ch_Name_list=['Channel 1', 'Channel 2']
 
         for ch,chn in zip(Ch_List,Ch_Name_list):
+            #construct 10 principal components
             PCA_DF, PCA_M, Scaled_Data = PCA_Constructor(ch,10)
             PCA_DF=pd.concat([PCA_DF,All_df.iloc[:,-3:]],axis=1)
             PCA_Results=[PCA_DF,PCA_M, Scaled_Data]
