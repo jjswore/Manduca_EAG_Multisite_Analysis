@@ -9,6 +9,10 @@ import glob
 from scipy.signal import butter, lfilter
 from scipy import optimize
 
+def Check_Dir(DIR):
+    if not os.path.exists(DIR):
+        os.makedirs(DIR)
+
 def find_sol(data):  # data = abf.sweepY of second channel out of three channels "channel = 1" from abf file
     SolFall = np.diff(data)
     NI = [i for i, v in enumerate(SolFall) if v < -0.3]
@@ -192,14 +196,24 @@ def open_wave(FILE):
     return l
 
 
-def csv_plot(FILE, NAME):
+def csv_plot(FILE, NAME, SDir, SAVE=True):
     #plot a csv file
     t = open_wave(FILE)
     # n=NAME.split("\\")
     plt.title(label=NAME, size=10)
-    plt.plot(t)
-    plt.show()
-    plt.close()
+    plt.plot(t, color='black')
+    plt.axvspan(500, 1000, color='pink', alpha=.25)
+    plt.ylim(-1.5,1.5)
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
+    if SAVE == True:
+        plt.savefig(SDir+NAME+".svg")
+        plt.savefig(SDir+NAME+".jpg")
+        plt.show()
+        plt.close()
+    else:
+        plt.show()
+        plt.close()
 
 
 def MinMax_Norm(xdata):
