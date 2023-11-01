@@ -47,7 +47,7 @@ def PCA_Constructor(data, PC=3):
         PCA_DF.rename({pc:f'PC {(pc+1)}'}, axis=1, inplace=True)
     return PCA_DF, PCA_set, scaled_data
 
-def TT_Split(DF, t=.7): #splits into train and test data by antenna so that a given percentage of antennas are used for training
+def TT_Split(DF, t=.75): #splits into train and test data by antenna so that a given percentage of antennas are used for training
     List=[x for x in DF['date'].unique()]
     Shuffled=random.sample(List, k=len(List))
 
@@ -66,7 +66,7 @@ def RFC_GridSearch(data, concentration, odors):
     data_df=data_df[data_df['label'].str.contains(odors)]
 
     print('splitting data')
-    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .7)
+    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .75)
 
     n_estimators = [10]
     max_features = ["sqrt", "log2"]
@@ -137,7 +137,7 @@ def RF_Testing(data, concentration, odors, classifier, P):
 
     # Split the data into training and testing sets
     print('splitting data')
-    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .7)
+    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .75)
     print(classifier.get_params(deep=True))
     params = classifier.get_params()
     params['n_estimators'] = 1000
@@ -193,7 +193,7 @@ def SVM_GridSearch(data, concentration, odors):
 
     # Split data into train and test sets
     print('Splitting data...')
-    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .7)
+    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .75)
 
     # Set hyperparameters to search over
     kernel = ['rbf']
@@ -269,7 +269,7 @@ def SVM_Testing(data, concentration, odors, classifier, P):
 
     # Split the dataset into training and testing sets
     print('Splitting data...')
-    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .7)
+    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .75)
 
     # Train the classifier
     print('Training model...')
@@ -352,7 +352,7 @@ def LogR_Testing(data, clf, odors, concentration, P): #F are the features you wa
     data_df=Analysis_data[Analysis_data['concentration'].str.contains(concentration)]
     data_df=data_df[data_df['label'].str.contains(odors)]
 
-    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .7)
+    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .75)
     #Create a svm clf # Linear Kernel
 
     #Train the model using the training sets
