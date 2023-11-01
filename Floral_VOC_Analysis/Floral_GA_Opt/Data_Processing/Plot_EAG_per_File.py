@@ -1,7 +1,7 @@
 import os
 from EAG_SIngleChannel_DataProcessing_Library import csv_plot
 # Path to the parent directory
-parent_directory = '/Users/joshswore/Manduca/Single_Channel_Analysis/EAG_Waves/Normalized/NoFilt/DATA/'
+parent_directory = '/Users/joshswore/Manduca/Multi_Channel_Analysis/EAG_Waves/Normalized/NoFilt/DATA/'
 
 # Use os.walk to go through each directory and subdirectory
 for dirpath, dirnames, filenames in os.walk(parent_directory):
