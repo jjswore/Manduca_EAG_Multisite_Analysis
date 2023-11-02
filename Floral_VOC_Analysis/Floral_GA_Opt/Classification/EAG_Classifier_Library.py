@@ -60,13 +60,15 @@ def TT_Split(DF, t=.75): #splits into train and test data by antenna so that a g
            TrainL, TestL)
 
 def RFC_GridSearch(data, concentration, odors):
-    Analysis_data=pd.concat(data)
+    #Analysis_data=pd.concat(data)
 
-    data_df=Analysis_data[Analysis_data['concentration'].str.contains(concentration)]
-    data_df=data_df[data_df['label'].str.contains(odors)]
-
-    print('splitting data')
+    #data_df=Analysis_data[Analysis_data['concentration'].str.contains(concentration)]
+    #data_df=data_df[data_df['label'].str.contains(odors)]
+    data_df = pd.concat(data, axis=1)
+    # Split data into train and test sets
+    print('Splitting data...')
     train_features, test_features, train_labels, test_labels = TT_Split(data_df, .75)
+    print(train_labels.shape, train_features.shape, test_labels.shape, train_labels.shape)
 
     n_estimators = [10]
     max_features = ["sqrt", "log2"]
@@ -90,9 +92,9 @@ def RFC_GridSearch(data, concentration, odors):
 
 
 
-    acc_scorer = make_scorer(accuracy_score)
+    #acc_scorer = make_scorer(accuracy_score)
     print("beginning grid search")
-    GRID_cv = HalvingGridSearchCV(RandomForestClassifier(),  param_grid, scoring=acc_scorer, cv=15, n_jobs=7, min_resources=14, error_score='raise')
+    GRID_cv = HalvingGridSearchCV(RandomForestClassifier(),  param_grid, scoring='accuracy', cv=5, n_jobs=7, min_resources=14, error_score='raise', verbose=10)
     GRID_cv.fit(train_features, train_labels)
     gbp=GRID_cv.best_params_
     gbs=GRID_cv.best_score_
@@ -137,7 +139,7 @@ def RF_Testing(data, concentration, odors, classifier, P):
 
     # Split the data into training and testing sets
     print('splitting data')
-    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .75)
+    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .7)
     print(classifier.get_params(deep=True))
     params = classifier.get_params()
     params['n_estimators'] = 1000
@@ -185,15 +187,16 @@ def SVM_GridSearch(data, concentration, odors):
     """
 
     # Concatenate data into a single dataframe
-    Analysis_data = pd.concat(data, axis=1)
+    #Analysis_data = pd.concat(data, axis=1)
 
     # Filter data based on concentration and odor label
-    data_df = Analysis_data[(Analysis_data['concentration'].str.contains(concentration)) &
-                            (Analysis_data['label'].str.contains(odors))]
-
+    #data_df = Analysis_data[(Analysis_data['concentration'].str.contains(concentration)) &
+                            #(Analysis_data['label'].str.contains(odors))]
+    data_df = pd.concat(data, axis=1)
     # Split data into train and test sets
     print('Splitting data...')
     train_features, test_features, train_labels, test_labels = TT_Split(data_df, .75)
+    print(train_labels, train_features)
 
     # Set hyperparameters to search over
     kernel = ['rbf']
@@ -312,7 +315,7 @@ def LogR_GridSearch(data, concentration, odors):
     data_df = data_df[data_df['label'].str.contains(odors)]
 
     print('splitting data')
-    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .7)
+    train_features, test_features, train_labels, test_labels = TT_Split(data_df, .75)
     #create an itereable for cross validation in hyperparameter tuning...
     #folds[[x for TT_Split(train_features, .7) in range(5)]]
 

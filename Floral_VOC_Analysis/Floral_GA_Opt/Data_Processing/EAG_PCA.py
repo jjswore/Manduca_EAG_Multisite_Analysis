@@ -62,13 +62,13 @@ def EAG_PCA(DATA, SAVEDIR, CONC, ODORS, OD):
     return All_DF_PCA_DF, PCA_set
 
 #=========================================================================================================
-"""data='/Users/joshswore/Manduca/Single_Channel_Analysis/DataFrames/Normalized/GA_Butter_Optimized/FDR_Fitness/LLL_finalDF.csv'
+'''data='/Users/joshswore/Manduca/MultiChannel/WildType/Floral/Quality_Controlled_Data/No_Filter/YY_Normalized/Both_Channels/_QC_T_1.csv'
 odors = 'lemonoil|limonene|linalool'
 Odenote = 'LLL'
 concentration = '1k'
-SaveDir='/Users/joshswore/Manduca/Single_Channel_Analysis/DataFrames/Normalized/GA_Butter_Optimized/FDR_Fitness/'
-EAG_PCA(DATA=data,SAVEDIR=SaveDir,CONC=concentration,ODORS=odors,OD=Odenote)
-"""
+SaveDir='/Users/joshswore/Manduca/TEST/'
+EAG_PCA(DATA=data,SAVEDIR=SaveDir,CONC=concentration,ODORS=odors,OD=Odenote)'''
+
 '''concentration = '1k'
 odors = 'linalool|limonene|lemonoil'#|1octen3ol|benzaldehyde|roseoil'#|ylangylang|benzylalcohol'
 odenote = 'LLL'

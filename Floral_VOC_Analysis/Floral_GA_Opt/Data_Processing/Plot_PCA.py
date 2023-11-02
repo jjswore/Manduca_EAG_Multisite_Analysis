@@ -94,13 +94,12 @@ def Plot_PCA(DATADIR, ODENOTE, ODORS, CONC, TITLE):
     plt.savefig(f'{SaveDir}{Odenotation}_PCA.svg')
     plt.show()
 
-'''data='/Users/joshswore/Manduca/Single_Channel_Analysis/Normalized_Exctracted_Waves/GA_Butter_Optimized/FDR_Fitness/RoLoLim/PCA'
-odors = 'lemonoil|roseoil|limonene'
-Odenote = 'RoLoLim'
+data='/Users/joshswore/Manduca/TEST/PCA/'
+odors = 'lemonoil|linalool|limonene'
+Odenote = 'LLL'
 concentration = '1k'
-SaveDir='/Users/joshswore/Manduca/Single_Channel_Analysis/Normalized_Exctracted_Waves/' \
-        'GA_Butter_Optimized/FDR_Fitness/RoLoLim/PCA'
-Plot_PCA(DATADIR=data,ODENOTE=Odenote,CONC=concentration,ODORS=odors,TITLE=f'Rose Oil, Lemon Oil, Limonene \n Concentration 1:1000')'''
+SaveDir='/Users/joshswore/Manduca/TEST/PCA'
+Plot_PCA(DATADIR=data,ODENOTE=Odenote,CONC=concentration,ODORS=odors,TITLE=f'Linalool, Lemon Oil, Limonene \n Concentration 1:1000')
 
 ###########################################################################################################
 #set the data to be loaded and set a save location

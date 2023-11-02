@@ -1,16 +1,19 @@
 import time
 from deap import base, creator, tools
 import pandas as pd
-from PythonFiles.Classification.EAG_Classifier_Library import TT_Split, PCA_Constructor
-from PythonFiles.Data_Processing.EAG_SIngleChannel_DataProcessing_Library import butter_bandpass_filter
+from Floral_VOC_Analysis.Floral_GA_Opt.Classification.EAG_Classifier_Library import TT_Split, PCA_Constructor
+from Floral_VOC_Analysis.Floral_GA_Opt.Data_Processing.EAG_DataProcessing_Library import butter_bandpass_filter
 import random
 import numpy as np
 def create_individual():
     #print('creating individual')
     return {
-        'lowcut': random.uniform(.00001, 1),
-        'highcut': random.uniform(1.001, 6),
-        'order': random.randint(1, 4)}
+        'lowcut_c1': random.uniform(.00001, 1),
+        'highcut_c1': random.uniform(1.001, 6),
+        'order_c1': random.randint(1, 4),
+        'lowcut_c2': random.uniform(.00001, 1),
+        'highcut_c2': random.uniform(1.001, 6),
+        'order_c2': random.randint(1, 4)}
 
 def apply_filter_to_dataframe(dataframe, lowcut, highcut, fs=1000, order=1):
     #print('applying filter to dataframe')
@@ -28,11 +31,22 @@ def apply_filter_to_dataframe(dataframe, lowcut, highcut, fs=1000, order=1):
     return filtered_dataframe
 
 def GA_EVAL_FDR_MultiClass(individual, data, _scaling_memory=[None]):
-    buttered_df = apply_filter_to_dataframe(dataframe=data.iloc[:, :-3],
-                                            lowcut=individual['lowcut'],
-                                            highcut=individual['highcut'],
-                                            order=individual['order'])
-    buttered_df = pd.concat([buttered_df, data.iloc[:, -3:]], axis=1)
+    CH1 = data.iloc[:, :9000]
+    CH2 = data.iloc[:, 9000:]
+    #META = data.iloc[:, -3:]
+    #CH1 = pd.concat([CH1, META], axis=1)
+
+    CH1buttered_df = apply_filter_to_dataframe(dataframe=CH1.iloc[:, :-3],
+                                            lowcut=individual['lowcut_c1'],
+                                            highcut=individual['highcut_c1'],
+                                            order=individual['order_c1'])
+
+    CH2buttered_df = apply_filter_to_dataframe(dataframe=CH2.iloc[:, :-3],
+                                            lowcut=individual['lowcut_c2'],
+                                            highcut=individual['highcut_c2'],
+                                            order=individual['order_c2'])
+
+    buttered_df = pd.concat([CH1buttered_df,CH2buttered_df, data.iloc[:, -3:]], axis=1)
 
     pca_df, _, _ = PCA_Constructor(buttered_df.iloc[:, :-3], 2)
     PCA_DF = pd.concat([pca_df, buttered_df.iloc[:, -3:]], axis=1)
@@ -56,6 +70,7 @@ def GA_EVAL_FDR_MultiClass(individual, data, _scaling_memory=[None]):
     # If the scaling factor isn't already computed, calculate and store it
     if _scaling_memory[0] is None:
         _scaling_memory[0] = 10 ** (-np.floor(np.log10(np.abs(FDR))))
+        #print(_scaling_memory[0])
     # Use the stored scaling factor to scale the FDR
     FDR_scaled = FDR * _scaling_memory[0]
 
@@ -70,9 +85,12 @@ def dict_mutate(individual, mu, sigma, indpb):
            # print('gauss va:', gauss_val)
             #print('individual before mutation', individual)
             individual[key] += gauss_val
-            individual['lowcut'] = max(.00001, min(1., individual['lowcut']))
-            individual['highcut'] = max(1.01, min(6., individual['highcut']))
-            individual['order'] = int(round(max(1, min(4, individual['order']))))
+            individual['lowcut_c1'] = max(.00001, min(1., individual['lowcut_c1']))
+            individual['highcut_c1'] = max(1.01, min(6., individual['highcut_c1']))
+            individual['order_c1'] = int(round(max(1, min(4, individual['order_c1']))))
+            individual['lowcut_c2'] = max(.00001, min(1., individual['lowcut_c2']))
+            individual['highcut_c2'] = max(1.01, min(6., individual['highcut_c2']))
+            individual['order_c2'] = int(round(max(1, min(4, individual['order_c2']))))
             #print('after mutation', individual)
             #print('\n' )
     return individual,
@@ -90,9 +108,12 @@ def dict_mate(ind1, ind2, eta, indpb):
         o1[key] = 0.5 * (((1 + beta) * x1) + ((1 - beta) * x2))
         o2[key] = 0.5 * (((1 - beta) * x1) + ((1 + beta) * x2))
         for o in ol:
-            o['lowcut'] = max(.00001, min(1, o['lowcut']))
-            o['highcut'] = max(1.01, min(6, o['highcut']))
-            o['order'] = int(round(max(1, min(4, o['order']))))
+            o['lowcut_c1'] = max(.00001, min(1, o['lowcut_c1']))
+            o['lowcut_c2'] = max(.00001, min(1, o['lowcut_c2']))
+            o['highcut_c1'] = max(1.01, min(6, o['highcut_c1']))
+            o['highcut_c2'] = max(1.01, min(6, o['highcut_c2']))
+            o['order_c1'] = int(round(max(1, min(4, o['order_c1']))))
+            o['order_c2'] = int(round(max(1, min(4, o['order_c2']))))
     return o1, o2
 
 def main(data, POPULATION_SIZE, TOURNAMENT_SIZE, CROSS_PROB, MUT_PROB, G):

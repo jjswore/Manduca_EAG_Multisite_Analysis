@@ -196,14 +196,14 @@ def open_wave(FILE):
     return l
 
 
-def csv_plot(FILE, NAME, SDir, SAVE=True):
+def csv_plot(FILE, NAME, SDir,ylim=[-1,1], SAVE=True):
     #plot a csv file
     t = open_wave(FILE)
     # n=NAME.split("\\")
     plt.title(label=NAME, size=10)
     plt.plot(t, color='black')
     plt.axvspan(500, 1000, color='pink', alpha=.25)
-    plt.ylim(-1.5,1.5)
+    plt.ylim(ylim[0], ylim[1])
     plt.gca().spines['top'].set_visible(False)
     plt.gca().spines['right'].set_visible(False)
     if SAVE == True:
